@@ -7,11 +7,14 @@
 //
 
 import UIKit
-import CoreData
+//import CoreData
+import RealmSwift
 
 class CategoryTableViewController: UITableViewController {
     
-    var categoryArray = [Category]();
+    let realm = try! Realm();
+    
+    var categoryArray: Results<Category>?;
     
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext;
 
@@ -24,22 +27,23 @@ class CategoryTableViewController: UITableViewController {
     //    MARK: - TableView Datasource Methods
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath);
-        let category = categoryArray[indexPath.row];
-        cell.textLabel?.text = category.name;
+        cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "Not categories added yet!";
         
         return cell;
         
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categoryArray.count;
+        return categoryArray?.count ?? 1;
     }
     
     //    MARK: - Data Manipulation Methods
     
-    func saveCategories()  {
+    func saveCategories(category: Category)  {
         do {
-            try context.save();
+            try realm.write {
+                realm.add(category);
+            };
         } catch {
             print("Error saving context \(error)");
         }
@@ -47,13 +51,12 @@ class CategoryTableViewController: UITableViewController {
         tableView.reloadData();
     }
     
-    func loadCategories(with request:NSFetchRequest<Category> = Category.fetchRequest()) {
-        do {
-            categoryArray = try context.fetch(request);
-        } catch {
-            print("Error fetching data form context \(error)");
-        }
+    func loadCategories() {
         
+        categoryArray = realm.objects(Category.self);
+        
+
+//
         tableView.reloadData();
     }
     
@@ -67,14 +70,14 @@ class CategoryTableViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
             if let text = textField.text {
                 
-                let newCategory = Category(context: self.context);
+                let newCategory = Category();
                 newCategory.name = text;
                 
-                self.categoryArray.append(newCategory);
+//                self.categoryArray.append(newCategory);
+                self.saveCategories(category: newCategory);
                 
             }
             
-            self.saveCategories();
         }
         
         alert.addTextField { (alertTextField) in
@@ -91,7 +94,6 @@ class CategoryTableViewController: UITableViewController {
     //    MARK: - TableView Delegate Methods
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print(categoryArray[indexPath.row]);
         
         performSegue(withIdentifier: "goToItems", sender: self);
         
@@ -101,7 +103,7 @@ class CategoryTableViewController: UITableViewController {
         let destinationVC = segue.destination as! TodoListViewController
         
         if var indexPath = tableView.indexPathForSelectedRow {
-            destinationVC.selectedCategory = categoryArray[indexPath.row];
+            destinationVC.selectedCategory = categoryArray?[indexPath.row];
         }
     
     }
