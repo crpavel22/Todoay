@@ -9,31 +9,45 @@
 import UIKit
 //import CoreData
 import RealmSwift
+import ChameleonFramework
 
-class CategoryTableViewController: UITableViewController {
+
+class CategoryTableViewController: SwipeTableViewController{
     
     let realm = try! Realm();
     
     var categoryArray: Results<Category>?;
     
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext;
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         loadCategories();
-       
+        
+        
+        
     }
     
     //    MARK: - TableView Datasource Methods
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath);
+        
+        let cell = super.tableView(tableView, cellForRowAt: indexPath);
+        
+        
         cell.textLabel?.text = categoryArray?[indexPath.row].name ?? "Not categories added yet!";
+        
+        let categoryColour = UIColor(hexString: categoryArray?[indexPath.row].color ?? "1D9BF6");
+        
+        cell.backgroundColor = categoryColour;
+        
+        cell.textLabel?.textColor = ContrastColorOf(categoryColour!, returnFlat: true);
+        
         
         return cell;
         
     }
     
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int ) -> Int {
         return categoryArray?.count ?? 1;
     }
     
@@ -55,13 +69,13 @@ class CategoryTableViewController: UITableViewController {
         
         categoryArray = realm.objects(Category.self);
         
-
-//
+        
+        //
         tableView.reloadData();
     }
     
     //    MARK: - Add New Categories
-
+    
     @IBAction func addCategoryPressed(_ sender: UIBarButtonItem) {
         var textField = UITextField();
         
@@ -72,8 +86,9 @@ class CategoryTableViewController: UITableViewController {
                 
                 let newCategory = Category();
                 newCategory.name = text;
+                newCategory.color = UIColor.randomFlat.hexValue();
                 
-//                self.categoryArray.append(newCategory);
+                //                self.categoryArray.append(newCategory);
                 self.saveCategories(category: newCategory);
                 
             }
@@ -105,8 +120,24 @@ class CategoryTableViewController: UITableViewController {
         if var indexPath = tableView.indexPathForSelectedRow {
             destinationVC.selectedCategory = categoryArray?[indexPath.row];
         }
+        
+    }
     
+    override func updateModel(at indexPath: IndexPath) {
+        if let category = self.categoryArray?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(category);
+                }
+            } catch {
+                print("Error to delete category \(error)");
+            }
+        }
+        
+        
     }
     
     
 }
+
+
